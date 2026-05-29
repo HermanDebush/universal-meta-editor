@@ -1,0 +1,22 @@
+# Normalize line endings
+* text=auto
+
+# Python
+*.py   text eol=lf
+*.pyw  text eol=lf
+
+# Docs
+*.md   text eol=lf
+*.txt  text eol=lf
+
+# Keep binary files untouched
+*.docx binary
+*.xlsx binary
+*.pptx binary
+*.pptm binary
+*.xlsm binary
+*.docm binary
+*.vsdx binary
+*.png  binary
+*.jpg  binary
+*.ico  binary

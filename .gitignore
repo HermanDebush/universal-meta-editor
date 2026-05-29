@@ -1,0 +1,93 @@
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+
+# ── Virtual environments ──────────────────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+.env
+.python-version
+
+# ── Distribution / packaging ──────────────────────────────────────────────────
+build/
+dist/
+*.egg-info/
+*.egg
+MANIFEST
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+
+# ── PyInstaller (if you ever build an .exe) ───────────────────────────────────
+*.spec
+*.manifest
+# …but keep the project's build recipe under version control
+!UniversalMeta.spec
+
+# ── Unit test / coverage ──────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+*.cover
+nosetests.xml
+coverage.xml
+
+# ── Type checkers ─────────────────────────────────────────────────────────────
+.mypy_cache/
+.dmypy.json
+.pyright/
+pyrightconfig.json
+.ruff_cache/
+
+# ── IDEs ─────────────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.swp
+*.swo
+*~
+
+# ── OS files ─────────────────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+Thumbs.db
+ehthumbs.db
+desktop.ini
+
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Office test files (don't commit personal documents) ──────────────────────
+*.docx
+*.xlsx
+*.pptx
+*.docm
+*.xlsm
+*.pptm
+*.vsdx
+
+# ── Secrets / local config ────────────────────────────────────────────────────
+.env.local
+.env.*.local
+secrets.py
+config.local.py
+
+# ── Runtime / user state ──────────────────────────────────────────────────────
+config.json          # saved language choice — user-specific
+
+# ── Cloud-sync temp folders (Google Drive, etc.) ──────────────────────────────
+.tmp.driveupload/
+.tmp.drivedownload/
