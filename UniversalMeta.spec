@@ -10,13 +10,14 @@ Build:
 from PyInstaller.utils.hooks import collect_all
 
 ctk_datas, ctk_binaries, ctk_hiddenimports = collect_all("customtkinter")
+dnd_datas, dnd_binaries, dnd_hiddenimports = collect_all("tkinterdnd2")
 
 a = Analysis(
     ["main.py"],
     pathex=[],
-    binaries=ctk_binaries,
-    datas=ctk_datas + [("assets", "assets")],   # include icon + any future assets
-    hiddenimports=ctk_hiddenimports,
+    binaries=ctk_binaries + dnd_binaries,
+    datas=ctk_datas + dnd_datas + [("assets", "assets")],   # include icon + any future assets
+    hiddenimports=ctk_hiddenimports + dnd_hiddenimports,
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

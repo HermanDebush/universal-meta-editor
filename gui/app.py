@@ -6,6 +6,7 @@ from pathlib import Path
 from tkinter import filedialog
 
 import customtkinter as ctk
+from tkinterdnd2 import DND_FILES, TkinterDnD
 
 from core.file_times import read_file_times, write_file_times
 from core.formats import (detect_format, html_extensions, is_html_ext,
@@ -25,16 +26,13 @@ from .toast import ToastManager
 from .widgets import (ACCENT, ACCENT2, BG, BORDER, CARD, MUTED, MUTED2, TEXT,
                       DateField, Divider, FieldRow, SectionLabel)
 
-# Drag-and-drop через Windows API (без windnd — windnd несовместим с Python 3.14)
-_DND = sys.platform == "win32"
-
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("green")
 
 ACCENT2 = "#059669"
 
 
-class App(ctk.CTk):
+class App(ctk.CTk, TkinterDnD.DnDWrapper):
     def __init__(self):
         super().__init__()
         self.title("Universal Meta Editor")
@@ -61,19 +59,36 @@ class App(ctk.CTk):
 
         self.toast = ToastManager(self)
 
-        if _DND:
-            self._setup_dnd()
+        self._setup_dnd()
 
     # ── Иконка окна ───────────────────────────────────────────────────────────
 
     def _apply_icon(self):
         """Set the window icon from assets/icon.ico (title bar + taskbar)."""
+        # Windows: явный AppUserModelID — таскбар берёт иконку окна,
+        # а не группирует приложение под python.exe.
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
+                    "SNNProject.UniversalMetaEditor")
+            except Exception:
+                pass
+        ico = Path(__file__).parent.parent / "assets" / "icon.ico"
+        if not ico.exists():
+            return
         try:
-            ico = Path(__file__).parent.parent / "assets" / "icon.ico"
-            if ico.exists():
-                self.wm_iconbitmap(str(ico))
+            self.wm_iconbitmap(str(ico))
         except Exception:
             pass
+        # CTk иногда сбрасывает иконку через ~200 мс после инициализации —
+        # применяем повторно.
+        def _reapply():
+            try:
+                self.iconbitmap(str(ico))
+            except Exception:
+                pass
+        self.after(300, _reapply)
 
     # ── Переключение языка ─────────────────────────────────────────────────────
 
@@ -155,17 +170,9 @@ class App(ctk.CTk):
         inner = ctk.CTkFrame(hdr, fg_color="transparent")
         inner.place(relx=0, rely=0.5, anchor="w", x=20)
 
-        badge = ctk.CTkFrame(inner, fg_color="#052e16", corner_radius=8,
-                             border_width=1, border_color="#14532d",
-                             width=34, height=34)
-        badge.pack(side="left")
-        badge.pack_propagate(False)
-        ctk.CTkLabel(badge, text="🌐", font=("", 16),
-                     fg_color="transparent").place(relx=0.5, rely=0.5, anchor="center")
-
         ctk.CTkLabel(inner, text="Universal Meta Editor",
                      font=ctk.CTkFont(size=14, weight="bold"),
-                     text_color=TEXT).pack(side="left", padx=(10, 6))
+                     text_color=TEXT).pack(side="left", padx=(0, 6))
 
         ctk.CTkLabel(inner, text="docx · xlsx · pptx · html · exe · dll",
                      font=ctk.CTkFont(size=11),
@@ -627,73 +634,33 @@ class App(ctk.CTk):
         ).pack(anchor="w")
         ctk.CTkFrame(card, height=10, fg_color="transparent").pack()
 
-    # ── Drag-and-drop (Windows API, без windnd) ───────────────────────────────
+    # ── Drag-and-drop (tkinterdnd2 / нативное расширение tkdnd) ────────────────
 
     def _setup_dnd(self):
+        """Регистрирует drag-and-drop файлов на всё окно через tkinterdnd2.
+
+        Использует нативное Tcl-расширение tkdnd, интегрированное в цикл
+        событий Tk — без ctypes-перехвата оконной процедуры (который
+        нестабилен на Python 3.14).
         """
-        Регистрирует WM_DROPFILES через Windows API (без windnd).
-        Все типы 64-битные — обязательно для x64 Windows.
-        """
-        import ctypes
+        try:
+            self.TkdndVersion = TkinterDnD._require(self)
+            self.drop_target_register(DND_FILES)
+            self.dnd_bind("<<Drop>>", self._on_drop)
+        except Exception:
+            pass
 
-        WM_DROPFILES = 0x0233
-        GWLP_WNDPROC = -4
-
-        # Правильные 64-битные типы для x64 Windows
-        LRESULT  = ctypes.c_longlong
-        HWND_T   = ctypes.c_longlong
-        UINT_T   = ctypes.c_uint
-        WPARAM_T = ctypes.c_longlong   # pointer-sized!
-        LPARAM_T = ctypes.c_longlong   # pointer-sized!
-
-        user32 = ctypes.windll.user32
-        shell32 = ctypes.windll.shell32
-
-        GetWindowLongPtr = user32.GetWindowLongPtrW
-        GetWindowLongPtr.restype  = ctypes.c_longlong
-        GetWindowLongPtr.argtypes = [HWND_T, ctypes.c_int]
-
-        SetWindowLongPtr = user32.SetWindowLongPtrW
-        SetWindowLongPtr.restype  = ctypes.c_longlong
-        SetWindowLongPtr.argtypes = [HWND_T, ctypes.c_int, ctypes.c_void_p]
-
-        CallWindowProc = user32.CallWindowProcW
-        CallWindowProc.restype  = LRESULT
-        CallWindowProc.argtypes = [ctypes.c_longlong, HWND_T, UINT_T, WPARAM_T, LPARAM_T]
-
-        DragQueryFile = shell32.DragQueryFileW
-        DragFinish    = shell32.DragFinish
-
-        DragAcceptFiles = shell32.DragAcceptFiles
-        DragAcceptFiles.argtypes = [HWND_T, ctypes.c_bool]
-
-        self.update_idletasks()
-        hwnd = self.winfo_id()
-        DragAcceptFiles(hwnd, True)
-
-        orig_proc = GetWindowLongPtr(hwnd, GWLP_WNDPROC)
-
-        WNDPROC = ctypes.WINFUNCTYPE(LRESULT, HWND_T, UINT_T, WPARAM_T, LPARAM_T)
-
-        @WNDPROC
-        def new_wnd_proc(hwnd_, msg, wparam, lparam):
-            if msg == WM_DROPFILES:
-                try:
-                    buf = ctypes.create_unicode_buffer(32768)
-                    DragQueryFile(wparam, 0, buf, len(buf))
-                    path = Path(buf.value)
-                    if path.is_file():
-                        self.after(0, lambda p=path: self._load_file(p))
-                except Exception:
-                    pass
-                finally:
-                    DragFinish(wparam)
-                return 0
-            return CallWindowProc(orig_proc, hwnd_, msg, wparam, lparam)
-
-        # Обязательно держим ссылку — иначе GC уберёт и будет SEGFAULT
-        self._wnd_proc_ref = new_wnd_proc
-        SetWindowLongPtr(hwnd, GWLP_WNDPROC, new_wnd_proc)
+    def _on_drop(self, event):
+        """Обработка брошенных файлов: берём первый существующий файл."""
+        try:
+            files = self.tk.splitlist(event.data)
+        except Exception:
+            files = [event.data]
+        for f in files:
+            p = Path(str(f).strip("{}"))
+            if p.is_file():
+                self._load_file(p)
+                break
 
     # ── Выбор файла ───────────────────────────────────────────────────────────
 
