@@ -195,7 +195,7 @@ class App(ctk.CTk, TkinterDnD.DnDWrapper):
             text_color=TEXT,
         ).pack(side="left", padx=(0, 12))
 
-        ctk.CTkLabel(right, text="v1.2",
+        ctk.CTkLabel(right, text="v1.2.1",
                      font=ctk.CTkFont(size=11),
                      text_color=MUTED).pack(side="left")
 

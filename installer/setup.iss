@@ -1,6 +1,6 @@
 [Setup]
 AppName=Universal Meta Editor
-AppVersion=1.2
+AppVersion=1.2.1
 AppPublisher=SNN PROJECT
 AppPublisherURL=https://projectsnn.com/hub
 AppSupportURL=https://github.com/HermanDebush/universal-meta-editor
